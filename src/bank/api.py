@@ -215,7 +215,9 @@ def create_app(db_path: str | Path | None = None, *, seed_if_empty: bool = True)
             raise HTTPException(400, "Idempotency-Key header is required")
         source = owned_account(body.from_account_id, customer_id, conn)
         try:
-            target = ledger.get_account_by_number(conn, body.to_account_number.strip().upper())
+            target = ledger.get_account_by_number(
+                conn, " ".join(body.to_account_number.split()).upper()
+            )
         except ledger.NotFound:
             target = None
         # One message for "no such account" and "wrong currency", so the reply does not reveal
