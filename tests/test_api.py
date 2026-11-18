@@ -234,3 +234,15 @@ def test_a_replay_returns_the_original_result(bank):
     again = transfer(client, bank["eur"].id, bank["foreign"].number, "10.00", key="orig")
     assert again.json()["from_account"]["balance"] == first.json()["from_account"]["balance"]
     assert again.json()["from_account"]["balance"] == "90.00"
+
+
+def test_a_huge_account_id_is_404(bank):
+    client = TestClient(bank["app"], raise_server_exceptions=False)
+    assert client.post("/api/session", json={"customer_id": bank["owner"]}).status_code == 200
+    huge = 9223372036854775808
+    assert client.get(f"/api/accounts/{huge}").status_code == 404
+    assert client.get(f"/api/accounts/{huge}/statement").status_code == 404
+    body = {"from_account_id": huge, "to_account_number": "YMS-0000-0003", "amount": "1.00"}
+    response = client.post("/api/transfers", json=body, headers={"Idempotency-Key": "huge-id"})
+    assert response.status_code == 404
+    assert client.get(f"/api/accounts/{bank['eur'].id}").json()["balance"] == "100.00"
