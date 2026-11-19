@@ -97,8 +97,6 @@ def owned_account(account_id: int, customer_id: CustomerId, conn: Conn) -> ledge
         account = ledger.get_account(conn, account_id)
     except ledger.NotFound:
         account = None
-    except OverflowError:
-        account = None
     if account is None or account.customer_id != customer_id:
         raise HTTPException(404, "account not found")
     return account
