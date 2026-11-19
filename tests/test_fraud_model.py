@@ -59,7 +59,7 @@ def test_model_metrics_are_recorded(fraud_run, record_metric):
         record_metric(name, value)
     # Clean holdout AUC is about 0.89 (bootstrap SE 0.015) and the weak v3 model about 0.85, so
     # both stay inside the band; the gate between them is PR-AUC in the CI report. A leak lifts
-    # AUC above 0.98, which is outside the band. See seeds/README.md for the measurements.
+    # AUC above 0.98, which is outside the band.
     assert 0.80 < metrics["auc"] < 0.97
     assert 0.0 < metrics["pr_auc"] <= 1.0
     assert 0.0 < metrics["recall_at_threshold"] <= 1.0

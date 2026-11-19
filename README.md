@@ -20,7 +20,6 @@ no real customers, account numbers, credentials or secrets. YMS Bank is not a re
 | `src/bank/seed_data.py` | Synthetic demo database builder. |
 | `src/bank/testing/ci_report.py` | Pytest plugin that writes the CI report. |
 | `src/fraud/` | Synthetic card fraud score kit: data, features, model, evaluation. |
-| `seeds/` | Patches that add known defects for verifier scenarios. |
 
 ## Ledger rules
 
@@ -71,9 +70,8 @@ uv run pytest -m bench                 # 1,000-transfer throughput benchmark onl
 uv run pytest -m "bench or not bench"  # everything
 ```
 
-The default run includes a 20-thread withdrawal race test, an inclusive statement end-date
-test, a test that walks every `/api/accounts/...` route to check the owner rule, and a CSS
-check that the Send button stays visible at 430 px and below.
+The default run includes an inclusive statement end-date test and a test that walks every
+`/api/accounts/...` route to check the owner rule.
 
 ## CI report
 
@@ -150,11 +148,6 @@ clean code the holdout AUC is about 0.89 and the PR-AUC about 0.39.
 Labels are taken as final: a fraud near the end of a window counts as fraud even though its
 chargeback would arrive up to 21 days later. A real pipeline would leave a label-maturity gap of
 that length between the training data and the evaluation; this demo does not.
-
-## Seeds
-
-Known defects live as patches in `seeds/`, never on `main`. See [seeds/README.md](seeds/README.md)
-for what each seed does and which scenarios use it.
 
 ## Leak checks
 
