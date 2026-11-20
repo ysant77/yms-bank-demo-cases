@@ -56,3 +56,22 @@ def test_money_of_rejects_extra_decimals():
 def test_money_of_rejects_non_numbers(value):
     with pytest.raises(ValueError):
         Money.of(value, "EUR")
+
+
+def money_or_none(text, currency):
+    try:
+        return Money.of(text, currency)
+    except ValueError:
+        return None
+
+
+def test_zero_decimals_are_accepted():
+    assert money_or_none("1.0", "JPY") == Money(1, "JPY")
+    assert money_or_none("1.2300", "EUR") == Money(123, "EUR")
+
+
+def test_non_zero_extra_decimals_are_still_refused():
+    with pytest.raises(ValueError):
+        Money.of("1.2301", "EUR")
+    with pytest.raises(ValueError):
+        Money.of("1.5", "JPY")
