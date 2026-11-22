@@ -58,10 +58,7 @@ class Money:
             raise ValueError(f"{amount!r} is not a number") from None
         if not value.is_finite():
             raise ValueError(f"{amount!r} is not a finite amount")
-        places = exponent(currency)
-        if -value.as_tuple().exponent > places and value != value.quantize(
-            Decimal(1).scaleb(-places)
-        ):
+        if -value.as_tuple().exponent > exponent(currency):
             raise ValueError(f"{amount} has more decimals than {currency} allows")
         return cls(to_minor(value, currency), currency)
 
