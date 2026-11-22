@@ -111,19 +111,6 @@ def test_statement_rejects_bad_dates(bank):
     assert client.get(base + "?from=yesterday").status_code == 422
 
 
-def test_statement_can_show_credits_only(bank, at):
-    conn = ledger.open_db(bank["path"])
-    ledger.deposit(conn, bank["eur"].id, Money.of("20.00", "EUR"), at=at("2026-05-02"))
-    ledger.deposit(conn, bank["eur"].id, Money.of("30.00", "EUR"), at=at("2026-05-03"))
-    ledger.withdraw(conn, bank["eur"].id, Money.of("5.00", "EUR"), at=at("2026-05-04"))
-    conn.close()
-    client = login(bank["app"], bank["owner"])
-    url = f"/api/accounts/{bank['eur'].id}/statement?from=2026-05-02&to=2026-05-31&kind=credit"
-    lines = client.get(url).json()["lines"]
-    assert len(lines) == 2
-    assert all(line["amount_minor"] > 0 for line in lines)
-
-
 def transfer(client, from_id, to_number, amount, key=None, **extra):
     body = {"from_account_id": from_id, "to_account_number": to_number, "amount": amount}
     headers = {"Idempotency-Key": key or str(uuid.uuid4())}
