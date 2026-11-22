@@ -110,7 +110,8 @@ def parse_amount(text: str, currency: str) -> Money:
         value = Decimal(text)
     except InvalidOperation:
         raise HTTPException(400, "amount is not a number") from None
-    if -value.as_tuple().exponent > exponent(currency):
+    places = exponent(currency)
+    if -value.as_tuple().exponent > places and value != value.quantize(Decimal(1).scaleb(-places)):
         raise HTTPException(400, f"too many decimals for {currency}")
     return Money.of(value, currency)
 

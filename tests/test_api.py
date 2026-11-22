@@ -234,3 +234,10 @@ def test_a_replay_returns_the_original_result(bank):
     again = transfer(client, bank["eur"].id, bank["foreign"].number, "10.00", key="orig")
     assert again.json()["from_account"]["balance"] == first.json()["from_account"]["balance"]
     assert again.json()["from_account"]["balance"] == "90.00"
+
+
+def test_transfer_accepts_zero_decimals(bank):
+    client = login(bank["app"], bank["owner"])
+    response = transfer(client, bank["eur"].id, "YMS-0000-0003", "10.000")
+    assert response.status_code == 201
+    assert response.json()["amount"] == "10.00"
