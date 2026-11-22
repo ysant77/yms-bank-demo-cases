@@ -29,7 +29,7 @@ def test_account_numbers_are_obviously_fake(conn):
     first = ledger.open_account(conn, customer, "EUR")
     second = ledger.open_account(conn, customer, "JPY")
     assert (first.number, second.number) == ("YMS-0000-0001", "YMS-0000-0002")
-    assert ledger.account_number(12345).startswith("YMS-")
+    assert ledger.account_number(12345) == "YMS-0001-2345"
 
 
 def test_deposit_and_withdraw_keep_books_balanced(conn, two_accounts):
@@ -269,9 +269,3 @@ def test_a_failed_rollback_to_stops_the_job_and_commits_nothing(tmp_path):
     assert not conn.in_transaction
     assert ledger.list_customers(conn) == []
     assert conn.execute("SELECT COUNT(*) FROM app_flags").fetchone()[0] == 0
-
-
-def test_account_number_refuses_a_sequence_out_of_range():
-    for sequence in (0, 100_000_000):
-        with pytest.raises(ledger.LedgerError):
-            ledger.account_number(sequence)

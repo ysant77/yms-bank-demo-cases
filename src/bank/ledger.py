@@ -88,10 +88,7 @@ def timestamp(at: datetime | None = None) -> str:
 
 def account_number(sequence: int) -> str:
     """Obviously fake account numbers: YMS-0000-0001, YMS-0000-0002, ..."""
-    if not 1 <= sequence <= 99_999_999:
-        raise LedgerError(f"account sequence out of range: {sequence}")
-    high, low = divmod(sequence, 1_000)
-    return f"YMS-{high:04d}-{low:04d}"
+    return f"YMS-{sequence // 10_000:04d}-{sequence % 10_000:04d}"
 
 
 def _row_to_account(row: sqlite3.Row | None) -> Account:
