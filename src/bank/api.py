@@ -172,7 +172,6 @@ def create_app(db_path: str | Path | None = None, *, seed_if_empty: bool = True)
         conn: Conn,
         start: Annotated[date | None, Query(alias="from")] = None,
         end: Annotated[date | None, Query(alias="to")] = None,
-        kind: str | None = None,
     ) -> dict[str, object]:
         for value in (start, end):
             if value is not None and not EARLIEST_DATE <= value <= LATEST_DATE:
@@ -184,9 +183,6 @@ def create_app(db_path: str | Path | None = None, *, seed_if_empty: bool = True)
         except ledger.LedgerError as exc:
             raise HTTPException(400, str(exc)) from None
         cur = account.currency
-        lines = st.lines
-        if kind in ("credit", "debit"):
-            lines = [line for line in lines if line.amount_minor > 0]
         return {
             "account": account_json(account),
             "from": st.start.isoformat(),
@@ -203,7 +199,7 @@ def create_app(db_path: str | Path | None = None, *, seed_if_empty: bool = True)
                     **money_fields("amount", line.amount_minor, cur),
                     **money_fields("balance", line.balance_minor, cur),
                 }
-                for line in lines
+                for line in st.lines
             ],
         }
 
