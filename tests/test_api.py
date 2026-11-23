@@ -234,3 +234,9 @@ def test_a_replay_returns_the_original_result(bank):
     again = transfer(client, bank["eur"].id, bank["foreign"].number, "10.00", key="orig")
     assert again.json()["from_account"]["balance"] == first.json()["from_account"]["balance"]
     assert again.json()["from_account"]["balance"] == "90.00"
+
+
+def test_transfer_accepts_a_typed_account_number(bank):
+    client = login(bank["app"], bank["owner"])
+    for typed in ("yms-0000-0003", " YMS-0000-0003 "):
+        assert transfer(client, bank["eur"].id, typed, "1.00").status_code == 201
