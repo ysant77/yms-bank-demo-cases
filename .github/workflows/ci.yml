@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # judge/** : one long-lived branch for each demo case of a judge site (agile-team,
+    # docs/OWNER-HELD-STEPS.md); its report is written to reports/<branch>.json.
+    branches: [main, 'judge/**']
 
 permissions:
   contents: read
@@ -52,16 +54,20 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: uv run python scripts/repro.py --base "$BASE_SHA" --head "$HEAD_SHA" --head-report ci-report.json
-      # D-cov: the main report (main.json on the ci-reports branch) holds the base total. It is
-      # the report of the latest push to main, not of the pull request's base commit. It is
-      # fetched in its own step, so no step that runs pull request code sees the token.
-      - name: Fetch the main report
+      # D-cov: the report of the pull request's base branch (main.json on the ci-reports branch
+      # for main, reports/<branch with / as ->.json for a judge branch) holds the base total. It
+      # is the report of the latest push to that branch, not of the pull request's base commit.
+      # It is fetched in its own step, so no step that runs pull request code sees the token. It
+      # is saved as main.json, the name the next steps read.
+      - name: Fetch the base branch report
         if: ${{ github.event_name == 'pull_request' && !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          gh api "repos/$REPO/contents/main.json?ref=ci-reports" --jq .content 2>/dev/null \
+          if [ "$BASE_REF" = main ] || [ -z "$BASE_REF" ]; then path=main.json; else path="reports/${BASE_REF//\//-}.json"; fi
+          gh api "repos/$REPO/contents/$path?ref=ci-reports" --jq .content 2>/dev/null \
             | base64 -d > main.json || rm -f main.json
       # D-cov: coverage of the changed lines of src/. The diff ends at the checked-out commit (for
       # a pull request, the merge commit), the commit that the coverage run measured.
@@ -136,9 +142,10 @@ jobs:
             gh pr comment "$PR" --repo "$REPO" --body-file comment.md
           fi
 
-  # Publishes the default branch report to the ci-reports branch as main.json.
+  # Publishes the report of a push to main (main.json) or to a judge branch
+  # (reports/<branch with / as ->.json) on the ci-reports branch.
   publish-main-report:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !cancelled() }}
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/judge/')) && !cancelled() }}
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -162,17 +169,19 @@ jobs:
           name: main-report-sha256-${{ steps.hash.outputs.sha256 }}-attempt-${{ github.run_attempt }}
           path: ci-report.json
           if-no-files-found: error
-      - name: Write main.json on the ci-reports branch
+      - name: Write the branch report on the ci-reports branch
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
         run: |
+          if [ "$BRANCH" = main ]; then path=main.json; else path="reports/${BRANCH//\//-}.json"; fi
           if ! gh api "repos/$REPO/branches/ci-reports" > /dev/null 2>&1; then
             gh api "repos/$REPO/git/refs" -f ref=refs/heads/ci-reports -f sha="$GITHUB_SHA" > /dev/null
           fi
-          sha=$(gh api "repos/$REPO/contents/main.json?ref=ci-reports" --jq .sha 2>/dev/null || true)
-          args=(-X PUT "repos/$REPO/contents/main.json" -f branch=ci-reports
-                -f message="ci: report for main at $GITHUB_SHA" -f content="$(base64 -w0 ci-report.json)")
+          sha=$(gh api "repos/$REPO/contents/$path?ref=ci-reports" --jq .sha 2>/dev/null || true)
+          args=(-X PUT "repos/$REPO/contents/$path" -f branch=ci-reports
+                -f message="ci: report for $BRANCH at $GITHUB_SHA" -f content="$(base64 -w0 ci-report.json)")
           if [ -n "$sha" ]; then args+=(-f sha="$sha"); fi
           gh api "${args[@]}" > /dev/null
 
@@ -207,7 +216,7 @@ jobs:
           REPORT: ${{ needs.report.result }}
           PUBLISH: ${{ needs.publish-main-report.result }}
           WANT_REPORT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
-          WANT_PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          WANT_PUBLISH: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/judge/')) }}
         run: |
           fail=0
           need() { echo "$1: $2"; if [ "$2" != success ]; then echo "::error::$1 must succeed, result is $2"; fail=1; fi; }
